@@ -1,0 +1,14 @@
+# Secrets
+.env.local
+.env
+
+# Dependencies
+node_modules
+
+# Build output
+.next
+
+# Git & OS
+.git
+.gitignore
+README.md
