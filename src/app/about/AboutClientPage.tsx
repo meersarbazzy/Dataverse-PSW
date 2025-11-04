@@ -77,10 +77,10 @@ const AboutSectionOne = () => {
       <div className="container">
         <div className="mx-auto max-w-4xl text-center">
           <h2 className="mb-6 text-3xl font-bold text-black dark:text-white sm:text-4xl">
-            What is the Data Hub?
+            What is the Dataverse?
           </h2>
           <p className="text-lg text-body-color dark:text-body-color-dark sm:text-xl">
-            The Data Hub is our centralized web page where all of our essential
+            The Dataverse is our centralized web page where all of our essential
             data tools and resources are made available to the team. It's the
             single source of truth for data operations, streamlining our
             workflows and enhancing productivity.
@@ -204,7 +204,7 @@ const AboutClientPage = () => {
   return (
     <>
       <Breadcrumb
-        pageName="About Our Data Hub"
+        pageName="About Our Dataverse"
         description="A centralized web page where all of the tools will be available."
         init={init}
         options={particleOptions}
