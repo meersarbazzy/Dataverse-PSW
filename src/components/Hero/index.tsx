@@ -1,96 +1,43 @@
-// "use client"
 "use client";
 
 import Link from "next/link";
 import Image from "next/image";
-// React hooks
 import React, { useEffect, useState, useRef } from "react";
 import Particles, { initParticlesEngine } from "@tsparticles/react";
 import { loadSlim } from "@tsparticles/slim";
 import type { ISourceOptions } from "@tsparticles/engine";
 
-// Swiper Imports
 import { Swiper, SwiperSlide } from "swiper/react";
 import type { Swiper as SwiperInstance } from "swiper";
 import { EffectCoverflow, Autoplay } from "swiper/modules";
-
-// Swiper CSS
 import "swiper/css";
 import "swiper/css/effect-coverflow";
 
-// --- (Tool Type aur Data) ---
-type Tool = {
-  id: number;
-  title: string;
-  description: string;
-  href: string;
-  image: string;
-};
+import { toolData } from "@/content/toolData";
+import type { Tool } from "@/types/tool";
 
-const toolData: Tool[] = [
-  {
-    id: 1,
-    title: "SQL Solution Recommender",
-    description: "Get intelligent recommendations for complex SQL queries...",
-    href: process.env.NEXT_PUBLIC_URL_SQL_RECOMMENDER || "#",
-    image: "/images/logo/logo_TBA.png",
-  },
-  {
-    id: 2,
-    title: "Validata",
-    description: "Our primary data validation tool...",
-    href: process.env.NEXT_PUBLIC_URL_VALIDATA || "#",
-    image: "/images/logo/logo_TBA.png",
-  },
-  {
-    id: 3,
-    title: "Data Quality & Error Logging Form",
-    description: "Easily report data issues...",
-    href: process.env.NEXT_PUBLIC_URL_DATA_QUALITY_FORM || "#",
-    image: "/images/logo/logo_TBA.png",
-  },
-  {
-    id: 4,
-    title: "Data Definitions",
-    description: "A clear, concise dictionary...",
-    href: process.env.NEXT_PUBLIC_URL_DATA_DEFINITIONS || "#",
-    image: "/images/logo/logo_TBA.png",
-  },
-  {
-    id: 5,
-    title: "Data Glossary",
-    description: "The central business glossary...",
-    href: process.env.NEXT_PUBLIC_URL_DATA_GLOSSARY || "#",
-    image: "/images/logo/logo_TBA.png",
-  },
-  {
-    id: 6,
-    title: "SOP Documents",
-    description: "Standard Operating Procedures...",
-    href: process.env.NEXT_PUBLIC_URL_SOP_DOCS || "#",
-    image: "/images/logo/logo_TBA.png",
-  },
-  {
-    id: 7,
-    title: "GitRepo",
-    description: "Browse our code repositories...",
-    href: process.env.NEXT_PUBLIC_URL_GITREPO || "#",
-    image: "/images/logo/logo_TBA.png",
-  },
-];
-
-// --- (ToolCard Component - No Change) ---
+// --- (ToolCard Component) ---
 const ToolCard = ({ tool }: { tool: Tool }) => {
-  const { title, description, href, image } = tool;
+  const { title, description, href, imageLight, imageDark } = tool;
   return (
     <div className="h-full">
       <div className="flex h-full flex-col overflow-hidden rounded-lg bg-white shadow-md duration-300 hover:shadow-xl dark:bg-gray-800">
-        <div className="relative h-48 w-full">
+        <div className="relative h-52 w-full">
+          {/* 2. Light mode image (hidden in darkmode) */}
           <Image
-            src={image}
+            src={imageLight}
             alt={title}
             fill
             style={{ objectFit: "cover" }}
+            className="dark:hidden"
+          />
+          {/* 3. Dark mode image (hidden in lightmode) */}
+          <Image
+            src={imageDark}
+            alt={title}
+            fill
+            style={{ objectFit: "cover" }}
+            className="hidden dark:block"
           />
         </div>
         <div className="flex flex-grow flex-col p-6">
@@ -112,11 +59,10 @@ const ToolCard = ({ tool }: { tool: Tool }) => {
   );
 };
 
-// --- (Main Page Component - Hero) ---
+// --- (Hero Component - Baaki sab same rahega) ---
 const Hero = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const sliderRef = useRef<SwiperInstance | null>(null);
-
   const [init, setInit] = useState(false);
 
   useEffect(() => {
@@ -125,8 +71,8 @@ const Hero = () => {
     }).then(() => setInit(true));
   }, []);
 
-  // Particle Options
   const particleOptions: ISourceOptions = {
+    // ... (Particle options) ...
     background: { color: { value: "transparent" } },
     fpsLimit: 60,
     interactivity: {
@@ -167,7 +113,6 @@ const Hero = () => {
         id="home"
         className="relative z-10 flex min-h-screen flex-col justify-between overflow-hidden bg-gradient-to-tr from-gray-100 to-gray-200 pt-32 pb-16 dark:bg-gradient-to-tr dark:from-[#00072d] dark:to-[#0a1128]"
       >
-        {/* Particle Background*/}
         {init && (
           <Particles
             id="tsparticles"
@@ -176,7 +121,6 @@ const Hero = () => {
           />
         )}
 
-        {/* Carousel Wrapper*/}
         <div className="flex flex-grow items-center">
           <div className="container">
             <Swiper
@@ -185,25 +129,18 @@ const Hero = () => {
               centeredSlides={true}
               slidesPerView={"auto"}
               loop={true}
-              autoplay={{
-                delay: 3000,
-                disableOnInteraction: false,
-              }}
+              autoplay={{ delay: 3000, disableOnInteraction: false }}
               coverflowEffect={{
-                rotate: 50,
+                rotate: 20,
                 stretch: 0,
                 depth: 100,
-                modifier: 1,
-                slideShadows: true,
+                modifier: 1.5,
+                slideShadows: false,
               }}
-              modules={[EffectCoverflow, Autoplay]} 
-              className="w-full" 
-              onSwiper={(swiper) => {
-                sliderRef.current = swiper;
-              }}
-              onSlideChange={(swiper) => {
-                setCurrentSlide(swiper.realIndex);
-              }}
+              modules={[EffectCoverflow, Autoplay]}
+              className="w-full"
+              onSwiper={(swiper) => (sliderRef.current = swiper)}
+              onSlideChange={(swiper) => setCurrentSlide(swiper.realIndex)}
             >
               {toolData.map((tool) => (
                 <SwiperSlide
@@ -217,13 +154,12 @@ const Hero = () => {
           </div>
         </div>
 
-        {/* Custom Dots Wrapper*/}
         <div className="container mx-auto w-full">
           <ul className="flex justify-center space-x-3">
             {toolData.map((_, index) => (
               <li key={index}>
                 <button
-                  className={`h-2 w-2 rounded-full transition-all duration-300 ${
+                  className={`h-2 w-2 rounded-full transition-all duration-30Example.jpg0 ${
                     currentSlide === index
                       ? "w-5 bg-primary"
                       : "bg-gray-400 dark:bg-gray-600"
@@ -235,17 +171,10 @@ const Hero = () => {
           </ul>
         </div>
 
-        {/* SVG Backgrounds*/}
-        <div className="absolute right-0 top-0 z-[-1] opacity-30 lg:opacity-100">
-          <svg /* ... */>{/* ... (svg code) ... */}</svg>
-        </div>
-        <div className="absolute bottom-0 left-0 z-[-1] opacity-30 lg:opacity-100">
-          <svg /* ... */>{/* ... (svg code) ... */}</svg>
-        </div>
+        {/* ... SVG backgrounds ... */}
       </section>
     </>
   );
 };
 
-// Export as default page
 export default Hero;
