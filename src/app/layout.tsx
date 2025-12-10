@@ -4,7 +4,7 @@ import Header from "@/components/Header";
 import { Inter } from "next/font/google";
 import "../styles/index.css";
 import { Providers } from "./providers";
-import { StreamlitChatWidget } from "@/components/Chatbot/StreamlitChatWidget";
+import { ChainlitChatWidget } from "@/components/Chatbot/ChainlitChatWidget";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -30,9 +30,9 @@ export default function RootLayout({
         <Providers>
           <Header />
           {children}
-          
-          
-          <StreamlitChatWidget />
+
+
+          <ChainlitChatWidget />
         </Providers>
       </body>
     </html>

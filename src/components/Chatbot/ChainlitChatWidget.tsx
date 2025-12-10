@@ -3,10 +3,10 @@
 import { useState } from "react";
 
 // --- CONFIGURATION ---
-const STREAMLIT_APP_URL = process.env.NEXT_PUBLIC_STREAMLIT_URL || "";
+const CHAINLIT_APP_URL = process.env.NEXT_PUBLIC_CHAINLIT_URL || "";
 // ---------------------
 
-export function StreamlitChatWidget() {
+export function ChainlitChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
 
   const toggleChat = () => {
@@ -16,8 +16,8 @@ export function StreamlitChatWidget() {
   return (
     // 1. New WRAPPER:
     <div className="fixed bottom-8 left-0 right-0 z-50 w-full pointer-events-none">
-      
-    
+
+
       <div className="container mx-auto px-4">
         <div className="flex justify-end">
           <div className="relative pointer-events-auto">
@@ -26,23 +26,26 @@ export function StreamlitChatWidget() {
             <div
               className={`
                 absolute bottom-[calc(100%+1rem)] right-0 
-                h-[600px] w-[400px] overflow-hidden rounded-lg bg-white shadow-2xl
-                transition-all duration-300 ease-in-out dark:bg-gray-900
-                ${
-                  isOpen
-                    ? "translate-y-0 opacity-100"
-                    : "translate-y-10 opacity-0 pointer-events-none"
+                h-[600px] w-[400px] overflow-hidden rounded-2xl 
+                glass-panel neon-border shadow-2xl
+                transition-all duration-300 ease-in-out
+                ${isOpen
+                  ? "translate-y-0 opacity-100"
+                  : "translate-y-10 opacity-0 pointer-events-none"
                 }
               `}
             >
               {/* Header */}
-              <div className="flex items-center justify-between bg-gray-100 p-4 dark:bg-gray-800">
-                <h3 className="font-bold text-black dark:text-white">
-                  Ask Dataverse
-                </h3>
+              <div className="flex items-center justify-between bg-white/10 p-4 border-b border-white/10 backdrop-blur-md">
+                <div className="flex items-center space-x-2">
+                  <div className="h-3 w-3 rounded-full bg-[#00ff9a] shadow-[0_0_10px_#00ff9a] animate-pulse" />
+                  <h3 className="font-bold text-white drop-shadow-md">
+                    Ask Dataverse
+                  </h3>
+                </div>
                 <button
                   onClick={toggleChat}
-                  className="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+                  className="text-gray-300 hover:text-white transition-colors duration-200 hover:rotate-90"
                   aria-label="Close chat"
                 >
                   {/* Close Icon (X) */}
@@ -62,9 +65,9 @@ export function StreamlitChatWidget() {
                 </button>
               </div>
 
-              {/* Streamlit App Iframe */}
+              {/* Chainlit App Iframe */}
               <iframe
-                src={STREAMLIT_APP_URL}
+                src={CHAINLIT_APP_URL}
                 width="100%"
                 height="100%"
                 frameBorder="0"
@@ -77,8 +80,10 @@ export function StreamlitChatWidget() {
               onClick={toggleChat}
               className={`
                 relative z-20 flex items-center justify-center rounded-full
-                bg-primary px-5 py-3 font-semibold
-                text-black shadow-lg
+                bg-primary/90 px-6 py-4 font-bold text-white
+                shadow-[0_0_20px_rgba(0,255,154,0.4)]
+                backdrop-blur-sm border border-primary/50
+                hover:scale-105 hover:bg-primary hover:shadow-[0_0_30px_rgba(0,255,154,0.6)]
                 transition-all duration-300 ease-in-out
                 ${isOpen ? "scale-0 opacity-0" : "scale-100 opacity-100"}
               `}
@@ -104,6 +109,6 @@ export function StreamlitChatWidget() {
           </div>
         </div>
       </div>
-    </div>
+    </div >
   );
 }

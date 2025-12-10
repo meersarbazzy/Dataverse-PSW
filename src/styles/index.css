@@ -133,3 +133,24 @@ layer(base);
     @apply inline-flex;
   }
 }
+
+@utility perspective-1000 {
+  perspective: 1000px;
+}
+@utility transform-style-3d {
+  transform-style: preserve-3d;
+}
+@utility backface-hidden {
+  backface-visibility: hidden;
+}
+@utility rotate-y-180 {
+  transform: rotateY(180deg);
+}
+@utility neon-border {
+  box-shadow: 0 0 10px rgba(0, 255, 154, 0.5), 0 0 20px rgba(0, 255, 154, 0.3);
+}
+@utility glass-panel {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
