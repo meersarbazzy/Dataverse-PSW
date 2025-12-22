@@ -19,14 +19,14 @@ declare global {
   }
 }
 
-const CHAINLIT_APP_URL = process.env.NEXT_PUBLIC_CHAINLIT_URL || "http://localhost:8000";
-
 export function ChainlitCopilot() {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
+    // Use relative path to go through Next.js proxy
+    // This avoids CORS issues and works if the backend is on another machine (behind the proxy)
+    const SCRIPT_URL = "/copilot/index.js";
     const scriptId = "chainlit-copilot-script";
-    const SCRIPT_URL = `${CHAINLIT_APP_URL}/copilot/index.js`;
 
     const initializeWidget = () => {
       let mountCheckCount = 0;
@@ -37,9 +37,11 @@ export function ChainlitCopilot() {
           console.log("mountChainlitWidget found, initializing...");
 
           try {
-            // Mount the default button into our HIDDEN container so it doesn't conflict
+            // Mount using the current origin (proxied)
+            // Empty string or "." often implies current path, but passing the origin is safer if the widget expects a full URL.
+            // However, with the proxy, we want it to treat the Next.js app AS the Chainlit server.
             window.mountChainlitWidget({
-              chainlitServer: CHAINLIT_APP_URL,
+              chainlitServer: "", // Browser will resolve endpoints relative to current origin e.g. /copilot/...
               theme: "light",
               button: {
                 containerId: "chainlit-hidden-container"
@@ -68,16 +70,21 @@ export function ChainlitCopilot() {
       }, 100);
     };
 
+    // If script is already there, just init
     if (document.getElementById(scriptId)) {
       if (window.mountChainlitWidget) initializeWidget();
       return;
     }
 
+    // Load the script
     const script = document.createElement("script");
     script.id = scriptId;
     script.src = SCRIPT_URL;
     script.async = true;
     script.onload = initializeWidget;
+    script.onerror = () => {
+        console.error("Failed to load Chainlit script. Please check if the backend is running and reachable via proxy.");
+    };
     document.body.appendChild(script);
   }, []);
 
@@ -91,11 +98,10 @@ export function ChainlitCopilot() {
 
   return (
     <>
-      {/* Hidden container for the default widget button (we don't want to see it) */}
+      {/* Hidden container for the default widget button */}
       <div id="chainlit-hidden-container" style={{ display: 'none' }} />
 
-      {/* CUSTOM BUTTON - Guaranteed to be visible */}
-      {/* Using Project Primary Color #009A5C */}
+      {/* CUSTOM "Ask Dataverse" BUTTON */}
       <button
         onClick={handleToggle}
         className="fixed bottom-6 right-6 z-50 flex h-16 w-16 items-center justify-center rounded-full shadow-lg transition-transform duration-300 hover:scale-110 focus:outline-none"
@@ -105,8 +111,8 @@ export function ChainlitCopilot() {
           boxShadow: "0 4px 14px rgba(0, 154, 92, 0.4)"
         }}
         aria-label="Ask Dataverse"
+        title="Ask Dataverse Copilot"
       >
-        {/* Chat Icon */}
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 24 24"
