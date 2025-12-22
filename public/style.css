@@ -1,0 +1,29 @@
+/* Glassmorphism for Chainlit Main Container */
+.MuiPaper-root {
+  background: rgba(255, 255, 255, 0.2) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Chat Messages */
+.message-content {
+  background: rgba(255, 255, 255, 0.5) !important;
+  backdrop-filter: blur(5px) !important;
+  border-radius: 12px !important;
+}
+
+/* User Message specific */
+.message-row.user .message-content {
+  background: rgba(0, 154, 92, 0.2) !important;
+  /* Brand Green Tint */
+  border: 1px solid rgba(0, 154, 92, 0.3) !important;
+}
+
+/* Input Area */
+.chat-input {
+  background: rgba(255, 255, 255, 0.6) !important;
+  backdrop-filter: blur(12px) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.3) !important;
+}

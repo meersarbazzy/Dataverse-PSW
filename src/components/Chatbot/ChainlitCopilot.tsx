@@ -13,21 +13,7 @@ declare global {
       chainlitServer: string;
       theme?: "light" | "dark";
       button?: {
-        id?: string;
-        containerId?: string;
-        imageUrl?: string;
-        style?: {
-          size?: string;
-          bgcolor?: string;
-          color?: string;
-          bgcolorHover?: string;
-          borderColor?: string;
-          borderWidth?: string;
-          fontFamily?: string;
-          fontSize?: string;
-          fontWeight?: string;
-          boxShadow?: string;
-        };
+        containerId?: string; // We will mount it to a hidden div
       };
     }) => void;
   }
@@ -36,93 +22,101 @@ declare global {
 const CHAINLIT_APP_URL = process.env.NEXT_PUBLIC_CHAINLIT_URL || "http://localhost:8000";
 
 export function ChainlitCopilot() {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
     const scriptId = "chainlit-copilot-script";
-    if (document.getElementById(scriptId)) return;
+    const SCRIPT_URL = `${CHAINLIT_APP_URL}/copilot/index.js`;
+
+    const initializeWidget = () => {
+      let mountCheckCount = 0;
+      const mountCheckInterval = setInterval(() => {
+        mountCheckCount++;
+        if (window.mountChainlitWidget) {
+          clearInterval(mountCheckInterval);
+          console.log("mountChainlitWidget found, initializing...");
+
+          try {
+            // Mount the default button into our HIDDEN container so it doesn't conflict
+            window.mountChainlitWidget({
+              chainlitServer: CHAINLIT_APP_URL,
+              theme: "light",
+              button: {
+                containerId: "chainlit-hidden-container"
+              },
+            });
+
+            // Poll for API readiness
+            let checkCount = 0;
+            const checkInterval = setInterval(() => {
+              checkCount++;
+              if (window.chainlit) {
+                setIsReady(true);
+                clearInterval(checkInterval);
+              }
+              if (checkCount > 200) clearInterval(checkInterval);
+            }, 100);
+
+          } catch (err) {
+            console.error("Error mounting widget:", err);
+          }
+        }
+
+        if (mountCheckCount > 200) {
+          clearInterval(mountCheckInterval);
+        }
+      }, 100);
+    };
+
+    if (document.getElementById(scriptId)) {
+      if (window.mountChainlitWidget) initializeWidget();
+      return;
+    }
 
     const script = document.createElement("script");
     script.id = scriptId;
-    script.src = `${CHAINLIT_APP_URL}/copilot/index.js`;
+    script.src = SCRIPT_URL;
     script.async = true;
-
-    script.onload = () => {
-      if (window.mountChainlitWidget) {
-        window.mountChainlitWidget({
-          chainlitServer: CHAINLIT_APP_URL,
-          theme: "light",
-          button: {
-            // We want to hide the default button because we are using our custom one
-            // We can try to make it invisible or tiny if there isn't a direct 'hide' option
-            // Or typically, sticking it in a hidden container works.
-            // For now, let's keep the config but maybe we can override it via CSS or
-            // just rely on our custom button overlaying it or being the primary interaction.
-            // Actually, if we don't provide a containerId, it appends to body.
-            style: {
-              bgcolor: "transparent",
-              color: "transparent",
-              boxShadow: "none",
-            }
-          },
-        });
-      }
-    };
-
+    script.onload = initializeWidget;
     document.body.appendChild(script);
   }, []);
 
   const handleToggle = () => {
     if (window.chainlit) {
       window.chainlit.toggle();
-      setIsOpen(!isOpen); // Optimistic toggle
     } else {
-      console.warn("Chainlit widget not loaded yet.");
+      console.warn("Chainlit API not ready yet");
     }
   };
 
   return (
-    <div className="fixed bottom-8 right-8 z-50 pointer-events-auto">
-      {/* Custom Button restoring the "Ask Dataverse" pill look */}
+    <>
+      {/* Hidden container for the default widget button (we don't want to see it) */}
+      <div id="chainlit-hidden-container" style={{ display: 'none' }} />
+
+      {/* CUSTOM BUTTON - Guaranteed to be visible */}
+      {/* Using Project Primary Color #009A5C */}
       <button
         onClick={handleToggle}
-        className={`
-          relative z-20 flex items-center justify-center rounded-full
-          bg-primary/90 px-6 py-4 font-bold text-white
-          shadow-[0_0_20px_rgba(0,255,154,0.4)]
-          backdrop-blur-sm border border-primary/50
-          hover:scale-105 hover:bg-primary hover:shadow-[0_0_30px_rgba(0,255,154,0.6)]
-          transition-all duration-300 ease-in-out
-        `}
+        className="fixed bottom-6 right-6 z-50 flex h-16 w-16 items-center justify-center rounded-full shadow-lg transition-transform duration-300 hover:scale-110 focus:outline-none"
+        style={{
+          background: "linear-gradient(135deg, #009A5C, #007A48)",
+          border: "2px solid rgba(255, 255, 255, 0.2)",
+          boxShadow: "0 4px 14px rgba(0, 154, 92, 0.4)"
+        }}
         aria-label="Ask Dataverse"
       >
         {/* Chat Icon */}
         <svg
-          className="mr-2 h-6 w-6"
-          fill="none"
-          stroke="currentColor"
+          xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 24 24"
+          fill="currentColor"
+          className="w-8 h-8 text-white"
         >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-          ></path>
+          <path d="M4.913 2.658c2.075-.27 4.19-.408 6.337-.408 2.147 0 4.262.139 6.337.408 1.922.25 3.291 1.861 3.405 3.727a4.403 4.403 0 00-1.032 1.757c-.502-2.325-2.553-4.004-4.872-4.419-4.156-.742-8.358-.742-12.514 0C5.176 4.263 3.1 6.095 2.633 8.94c-.167 1.012-.132 2.05.104 3.053l-.977 1.758c-.5 1.01.216 2.115 1.259 1.942l3.164-.525c.677.105 1.76.251 2.923.368a4.403 4.403 0 001.077-1.996 16.975 16.975 0 01-3.262-.437c-3-.537-5.116-2.59-5.613-5.592a8.68 8.68 0 011.696-6.852z" />
+          <path fillRule="evenodd" d="M12.593 17.962l-2.062.343c-.886.147-1.493 1.09-.99 1.896l.859 1.376c-1.163-.207-1.573-.97-1.47-1.898.118-1.071 1.7-1.298 2.66-.464l.872.486.13-.239zM15 12a3 3 0 11-6 0 3 3 0 016 0zm-1.8-1.8a1.2 1.2 0 10-2.4 0 1.2 1.2 0 002.4 0z" clipRule="evenodd" />
         </svg>
-        {/* Label Text */}
-        Ask Dataverse
       </button>
-
-      {/* 
-        We also need to ensure the default widget button (if it renders) is hidden.
-        We can do this via a global style or inline style injection.
-      */}
-      <style jsx global>{`
-        #chainlit-copilot-button {
-          display: none !important;
-        }
-      `}</style>
-    </div>
+    </>
   );
 }

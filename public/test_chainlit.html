@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chainlit Isolation Test</title>
+</head>
+<body>
+    <h1>Chainlit Test Page</h1>
+    <p>Open Console to see logs.</p>
+    <button id="test-btn">Test Button (Mock)</button>
+
+    <script type="module">
+        // Manual Bootstrap Logic
+        const script = document.createElement('script');
+        script.type = 'module';
+        script.crossOrigin = 'anonymous';
+        // PLEASE VERIFY THIS HASH IS CORRECT
+        script.src = 'http://localhost:8001/assets/index-BBD03a_V.js'; 
+        
+        script.onload = () => {
+            console.log('MAIN BUNDLE LOADED');
+            
+            // Wait slightly for execution
+            setTimeout(() => {
+                if (window.mountChainlitWidget) {
+                    console.log('MOUNT FUNCTION FOUND. Executing...');
+                    try {
+                        window.mountChainlitWidget({
+                            chainlitServer: 'http://localhost:8001',
+                            theme: 'light',
+                        });
+                        console.log('MOUNT CALLED SUCCESS');
+                    } catch (e) {
+                        console.error('MOUNT ERROR', e);
+                    }
+                } else {
+                    console.error('MOUNT FUNCTION NOT FOUND on window');
+                }
+            }, 1000);
+        };
+        script.onerror = (e) => console.error('SCRIPT LOAD ERROR', e);
+        document.body.appendChild(script);
+
+        // CSS
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = 'http://localhost:8001/assets/index-D0StyyNy.css'; 
+        document.head.appendChild(link);
+    </script>
+</body>
+</html>
