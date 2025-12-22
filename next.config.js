@@ -13,6 +13,9 @@ const nextConfig = {
       },
     ],
   },
+
+
+
   async rewrites() {
     const CHAINLIT_URL = process.env.NEXT_PUBLIC_CHAINLIT_URL || 'http://localhost:8000';
     return [
@@ -23,6 +26,18 @@ const nextConfig = {
       {
         source: '/_chainlit/:path*',
         destination: `${CHAINLIT_URL}/_chainlit/:path*`,
+      },
+      {
+        source: '/ws/:path*',
+        destination: `${CHAINLIT_URL}/ws/:path*`,
+      },
+      {
+        source: '/socket.io/:path*',
+        destination: `${CHAINLIT_URL}/socket.io/:path*`,
+      },
+      {
+        source: '/chainlit/assets/:path*',
+        destination: `${CHAINLIT_URL}/assets/:path*`,
       },
     ]
   },

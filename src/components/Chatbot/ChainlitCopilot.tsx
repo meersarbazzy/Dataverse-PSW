@@ -1,127 +1,185 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useTheme } from "next-themes";
 
-declare global {
-  interface Window {
-    chainlit?: {
-      toggle: () => void;
-      show: () => void;
-      hide: () => void;
-    };
-    mountChainlitWidget: (config: {
-      chainlitServer: string;
-      theme?: "light" | "dark";
-      button?: {
-        containerId?: string; // We will mount it to a hidden div
-      };
-    }) => void;
-  }
-}
+const CHAINLIT_APP_URL = process.env.NEXT_PUBLIC_CHAINLIT_URL || "http://localhost:8000";
 
 export function ChainlitCopilot() {
-  const [isReady, setIsReady] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const { resolvedTheme } = useTheme();
 
+  // Drag state
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartRef = useRef({ x: 0, y: 0 });
+
+  const windowRef = useRef<HTMLDivElement>(null);
+
+  // Keyboard Shortcuts & Click Outside
   useEffect(() => {
-    // Use relative path to go through Next.js proxy
-    // This avoids CORS issues and works if the backend is on another machine (behind the proxy)
-    const SCRIPT_URL = "/copilot/index.js";
-    const scriptId = "chainlit-copilot-script";
-
-    const initializeWidget = () => {
-      let mountCheckCount = 0;
-      const mountCheckInterval = setInterval(() => {
-        mountCheckCount++;
-        if (window.mountChainlitWidget) {
-          clearInterval(mountCheckInterval);
-          console.log("mountChainlitWidget found, initializing...");
-
-          try {
-            // Mount using the current origin (proxied)
-            // Empty string or "." often implies current path, but passing the origin is safer if the widget expects a full URL.
-            // However, with the proxy, we want it to treat the Next.js app AS the Chainlit server.
-            window.mountChainlitWidget({
-              chainlitServer: "", // Browser will resolve endpoints relative to current origin e.g. /copilot/...
-              theme: "light",
-              button: {
-                containerId: "chainlit-hidden-container"
-              },
-            });
-
-            // Poll for API readiness
-            let checkCount = 0;
-            const checkInterval = setInterval(() => {
-              checkCount++;
-              if (window.chainlit) {
-                setIsReady(true);
-                clearInterval(checkInterval);
-              }
-              if (checkCount > 200) clearInterval(checkInterval);
-            }, 100);
-
-          } catch (err) {
-            console.error("Error mounting widget:", err);
-          }
-        }
-
-        if (mountCheckCount > 200) {
-          clearInterval(mountCheckInterval);
-        }
-      }, 100);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Toggle on Ctrl + / (standard help shortcut)
+      if ((e.ctrlKey || e.metaKey) && e.key === "/") {
+        e.preventDefault();
+        setIsOpen((prev) => !prev);
+      }
+      // Close on Escape
+      if (e.key === "Escape" && isOpen) {
+        setIsOpen(false);
+      }
     };
 
-    // If script is already there, just init
-    if (document.getElementById(scriptId)) {
-      if (window.mountChainlitWidget) initializeWidget();
-      return;
+    const handleClickOutside = (e: MouseEvent) => {
+      // If clicking outside the chat window and NOT on the toggle button
+      if (
+        isOpen &&
+        windowRef.current &&
+        !windowRef.current.contains(e.target as Node) &&
+        !(e.target as Element).closest('button[aria-label="Ask Dataverse"]')
+      ) {
+        setIsOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    if (isOpen) window.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen]);
+
+  // Drag Logic
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging) return;
+
+      const newX = e.clientX - dragStartRef.current.x;
+      const newY = e.clientY - dragStartRef.current.y;
+
+      setPosition({ x: newX, y: newY });
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+      // Optional: Add boundary checks here to prevent losing the window
+    };
+
+    if (isDragging) {
+      window.addEventListener("mousemove", handleMouseMove);
+      window.addEventListener("mouseup", handleMouseUp);
+      document.body.style.userSelect = "none"; // Prevent text selection while dragging
+    } else {
+      document.body.style.userSelect = "";
     }
 
-    // Load the script
-    const script = document.createElement("script");
-    script.id = scriptId;
-    script.src = SCRIPT_URL;
-    script.async = true;
-    script.onload = initializeWidget;
-    script.onerror = () => {
-        console.error("Failed to load Chainlit script. Please check if the backend is running and reachable via proxy.");
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.userSelect = "";
     };
-    document.body.appendChild(script);
-  }, []);
+  }, [isDragging]);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    // Only drag via header
+    setIsDragging(true);
+    // Calculate offset from current position
+    dragStartRef.current = {
+      x: e.clientX - position.x,
+      y: e.clientY - position.y
+    };
+  };
 
   const handleToggle = () => {
-    if (window.chainlit) {
-      window.chainlit.toggle();
-    } else {
-      console.warn("Chainlit API not ready yet");
-    }
+    setIsOpen(!isOpen);
+    // Reset position if needed, or keep memory (currently keeps memory)
   };
+
+  const themeParam = resolvedTheme === "dark" ? "dark" : "light";
+  // Append theme to URL
+  const iframeSrc = `${CHAINLIT_APP_URL}?theme=${themeParam}`;
+
+  const isDark = resolvedTheme === "dark";
 
   return (
     <>
-      {/* Hidden container for the default widget button */}
-      <div id="chainlit-hidden-container" style={{ display: 'none' }} />
+      {/* Iframe Chat Window - Copilot Style */}
+      <div
+        ref={windowRef}
+        className={`fixed z-[9999] w-[450px] h-[650px] rounded-2xl shadow-2xl transition-all duration-300 cubic-bezier(0.16, 1, 0.3, 1) overflow-hidden flex flex-col border ${isOpen
+            ? "opacity-100 scale-100 pointer-events-auto"
+            : "opacity-0 scale-95 pointer-events-none translate-y-12"
+          }`}
+        style={{
+          // Positioning: Fixed at bottom-right + dynamic drag offset
+          right: "24px",
+          bottom: "96px",
+          transform: `translate(${position.x}px, ${position.y}px)`,
+
+          // Glassmorphism
+          background: isDark ? "rgba(20, 20, 20, 0.85)" : "rgba(255, 255, 255, 0.85)",
+          backdropFilter: "blur(20px)",
+          borderColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.5)",
+          boxShadow: isDark
+            ? "0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1) inset"
+            : "0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.5) inset"
+        }}
+      >
+        {/* Header - Draggable Area */}
+        <div
+          onMouseDown={handleMouseDown}
+          className={`flex items-center justify-between px-6 py-4 border-b backdrop-blur-sm cursor-grab active:cursor-grabbing select-none ${isDark ? "border-white/10 bg-white/5" : "border-gray-200/50 bg-white/50"
+            }`}
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-green-500 to-emerald-600 shadow-md">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-white"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+            </div>
+            <div>
+              <h3 className={`font-bold text-base leading-tight ${isDark ? "text-white" : "text-gray-800"}`}>Dataverse Copilot</h3>
+              <p className="text-[10px] uppercase tracking-wider font-semibold text-green-500">Online</p>
+            </div>
+          </div>
+
+          {/* Close Button */}
+          <button
+            onClick={() => setIsOpen(false)}
+            className={`p-2 rounded-full transition-all duration-200 ${isDark ? "text-gray-400 hover:text-white hover:bg-white/10" : "text-gray-400 hover:text-gray-600 hover:bg-black/5"
+              }`}
+            aria-label="Close Chat"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </div>
+
+        {/* Chat Area */}
+        <div className={`flex-1 w-full relative ${isDark ? "bg-black/20" : "bg-white/30"}`}>
+          <iframe
+            src={iframeSrc}
+            className="absolute inset-0 w-full h-full border-none"
+            title="Chainlit Chatbot"
+            allow="microphone"
+          />
+        </div>
+      </div>
 
       {/* CUSTOM "Ask Dataverse" BUTTON */}
       <button
         onClick={handleToggle}
-        className="fixed bottom-6 right-6 z-50 flex h-16 w-16 items-center justify-center rounded-full shadow-lg transition-transform duration-300 hover:scale-110 focus:outline-none"
+        className="fixed bottom-6 right-6 z-[9999] flex items-center justify-center rounded-full shadow-lg transition-transform duration-300 hover:scale-105 focus:outline-none px-6 py-3"
         style={{
           background: "linear-gradient(135deg, #009A5C, #007A48)",
           border: "2px solid rgba(255, 255, 255, 0.2)",
           boxShadow: "0 4px 14px rgba(0, 154, 92, 0.4)"
         }}
         aria-label="Ask Dataverse"
-        title="Ask Dataverse Copilot"
+        title="Ask Dataverse Copilot (Ctrl + /)"
       >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="currentColor"
-          className="w-8 h-8 text-white"
-        >
-          <path d="M4.913 2.658c2.075-.27 4.19-.408 6.337-.408 2.147 0 4.262.139 6.337.408 1.922.25 3.291 1.861 3.405 3.727a4.403 4.403 0 00-1.032 1.757c-.502-2.325-2.553-4.004-4.872-4.419-4.156-.742-8.358-.742-12.514 0C5.176 4.263 3.1 6.095 2.633 8.94c-.167 1.012-.132 2.05.104 3.053l-.977 1.758c-.5 1.01.216 2.115 1.259 1.942l3.164-.525c.677.105 1.76.251 2.923.368a4.403 4.403 0 001.077-1.996 16.975 16.975 0 01-3.262-.437c-3-.537-5.116-2.59-5.613-5.592a8.68 8.68 0 011.696-6.852z" />
-          <path fillRule="evenodd" d="M12.593 17.962l-2.062.343c-.886.147-1.493 1.09-.99 1.896l.859 1.376c-1.163-.207-1.573-.97-1.47-1.898.118-1.071 1.7-1.298 2.66-.464l.872.486.13-.239zM15 12a3 3 0 11-6 0 3 3 0 016 0zm-1.8-1.8a1.2 1.2 0 10-2.4 0 1.2 1.2 0 002.4 0z" clipRule="evenodd" />
-        </svg>
+        <span className="text-white font-semibold text-lg tracking-wide">
+          Ask Dataverse
+        </span>
       </button>
     </>
   );
