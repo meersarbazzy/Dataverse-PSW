@@ -1,14 +1,10 @@
-# Secrets
-.env.local
-.env
-
-# Dependencies
+Dockerfile
+.dockerignore
 node_modules
-
-# Build output
-.next
-
-# Git & OS
-.git
-.gitignore
+npm-debug.log
 README.md
+.next
+.git
+.env
+.env.local
+.DS_Store

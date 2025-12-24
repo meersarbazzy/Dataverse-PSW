@@ -1,45 +1,62 @@
-# === STAGE 1: BUILD ===
-FROM node:20-alpine AS builder
+FROM node:20-alpine AS base
+
+# Install dependencies only when needed
+FROM base AS deps
+# Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
+RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-COPY package.json package-lock.json ./
-RUN npm install
+# Install dependencies based on the preferred package manager
+COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* ./
+RUN \
+  if [ -f yarn.lock ]; then yarn --frozen-lockfile; \
+  elif [ -f package-lock.json ]; then npm ci; \
+  elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm i --frozen-lockfile; \
+  else echo "Lockfile not found." && exit 1; \
+  fi
+
+
+# Rebuild the source code only when needed
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Pass build-time environment variables from the build command
-ARG NEXT_PUBLIC_URL_SQL_RECOMMENDER
-ARG NEXT_PUBLIC_URL_VALIDATA
-ARG NEXT_PUBLIC_URL_DATA_QUALITY_FORM
-ARG NEXT_PUBLIC_URL_DATA_DEFINITIONS
-ARG NEXT_PUBLIC_URL_DATA_GLOSSARY
-ARG NEXT_PUBLIC_URL_SOP_DOCS
-ARG NEXT_PUBLIC_URL_GITREPO
+# Disable telemetry during the build.
+ENV NEXT_TELEMETRY_DISABLED 1
 
-# Set them as environment variables for the build process
-ENV NEXT_PUBLIC_URL_SQL_RECOMMENDER=$NEXT_PUBLIC_URL_SQL_RECOMMENDER
-ENV NEXT_PUBLIC_URL_VALIDATA=$NEXT_PUBLIC_URL_VALIDATA
-ENV NEXT_PUBLIC_URL_DATA_QUALITY_FORM=$NEXT_PUBLIC_URL_DATA_QUALITY_FORM
-ENV NEXT_PUBLIC_URL_DATA_DEFINITIONS=$NEXT_PUBLIC_URL_DATA_DEFINITIONS
-ENV NEXT_PUBLIC_URL_DATA_GLOSSARY=$NEXT_PUBLIC_URL_DATA_GLOSSARY
-ENV NEXT_PUBLIC_URL_SOP_DOCS=$NEXT_PUBLIC_URL_SOP_DOCS
-ENV NEXT_PUBLIC_URL_GITREPO=$NEXT_PUBLIC_URL_GITREPO
+RUN \
+  if [ -f yarn.lock ]; then yarn run build; \
+  elif [ -f package-lock.json ]; then npm run build; \
+  elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm run build; \
+  else echo "Lockfile not found." && exit 1; \
+  fi
 
-RUN npm run build
-
-
-# === STAGE 2: PRODUCTION ===
-FROM node:20-alpine AS runner
+# Production image, copy all the files and run next
+FROM base AS runner
 WORKDIR /app
 
-RUN addgroup -S nodejs
-RUN adduser -S nextjs -G nodejs
+ENV NODE_ENV production
+ENV NEXT_TELEMETRY_DISABLED 1
 
-# Copy only the necessary files from the "builder" stage
-COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+COPY --from=builder /app/public ./public
+
+# Set the correct permission for prerender cache
+mkdir .next
+chown nextjs:nodejs .next
+
+# Automatically leverage output traces to reduce image size
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 USER nextjs
-ENV PORT 3000
+
 EXPOSE 3000
+
+ENV PORT 3000
+ENV HOSTNAME "0.0.0.0"
+
 CMD ["node", "server.js"]
