@@ -81,7 +81,7 @@ const AboutSectionOne = () => {
           </h2>
           <p className="text-lg text-body-color dark:text-body-color-dark sm:text-xl">
             The Dataverse is our centralized web page where all of our essential
-            data tools and resources are made available to the team. It's the
+            data tools and resources are made available to the team. It&apos;s the
             single source of truth for data operations, streamlining our
             workflows and enhancing productivity.
           </p>
